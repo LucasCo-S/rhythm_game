@@ -1,19 +1,11 @@
-# Importa a biblioteca Pygame, que fornece funcionalidades para criar jogos
 import pygame
 import time
 import queue
 import threading
 import input
-# Importa todas as constantes do Pygame que nos ajudam a detectar:
-# - Teclas pressionadas (K_UP, K_DOWN, K_LEFT, K_RIGHT, etc)
-# - Cliques do mouse (MOUSEBUTTONDOWN, MOUSEBUTTONUP)
-# - Movimento do mouse (MOUSEMOTION)
-# - Eventos da janela (QUIT, VIDEORESIZE)
-# - Eventos do sistema (KEYDOWN, KEYUP)
 from pygame.locals import *
-
-# Importa a função exit() do módulo sys para encerrar o programa de forma limpa
 from sys import exit
+import notes
 
 pygame.init()
 
@@ -39,13 +31,18 @@ input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 input_data = queue.Queue()
 input_info = queue.Queue()
 
-t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True)
+t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True) #daemon serve para finalizar a thread quando finaliza o programa
 t_input_listen.start()
+
+#Notes settings
+note_data = queue.Queue()
+
+note_info = queue.Queue()
+
+note_listen = threading.Thread(target= notes.note_generation, args=(note_data, note_info), daemon=True)
 
 #Loop principal
 while True:
-
-    # Esquema de coloração da tela(RGB)
     screen.fill((28, 28, 28))
     
     for event in pygame.event.get():
@@ -65,6 +62,7 @@ while True:
 
                 input_data.put((event.key, input_start_time, input_end_time))
     
+
     clock.tick(FPS)
     pygame.display.flip()
     
