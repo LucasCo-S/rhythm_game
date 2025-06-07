@@ -3,6 +3,7 @@ import time
 import queue
 import threading
 import input
+import collision
 from pygame.locals import *
 from sys import exit
 import notes
@@ -18,7 +19,7 @@ screen_height: int = 720
 screen = pygame.display.set_mode((screen_width, screen_height))
 
 #Time handle
-FPS:int = 60
+FPS:int = 100
 clock = pygame.time.Clock()
 
 #titulo e icone 
@@ -30,19 +31,18 @@ pygame.display.set_icon(icon)
 key_label = {}
 input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 
-input_data = queue.Queue()
-input_info = queue.Queue()
+input_data = queue.Queue()#Send to thread
+input_info = queue.Queue()#Receive from thread
 
 t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True) #daemon serve para finalizar a thread quando finaliza o programa
 t_input_listen.start()
 
 #Notes settings
-note_data = queue.Queue()
-note_info = queue.Queue()
+note_data = queue.Queue()#Send to thread
+note_info = queue.Queue()#Receive thread
 
 #Read and Initialization
 note_order = queue.Queue()
-note_queue = queue.Queue() #Recycle values from note_order
 
 selected_music = interface.user_input()
 notes.notes_generator(selected_music, note_order)
@@ -65,21 +65,28 @@ def spawn_notes(current_time: int, tolerance: int):
         else:
             i += 1
 
-def draw_notes():
+
+sent_notes = set()
+
+def draw_notes() -> int:
     for note in screen_notes:
         note_rect = note.surf.get_rect(midbottom = (note.pos_x, note.pos_y))
         note.fall_note()
         screen.blit(note.surf, note_rect)
+
+        note_id = id(note)
+        if (note.pos_y > 600 and note.pos_y < 750 and note_id not in sent_notes):
+            note_info.put(note)
+            sent_notes.add(note_id)
+
+        # Remove notas que saíram da tela
+        if note.pos_y > (screen_height + note.size[1]):
+            atual = time.perf_counter()
+            return (atual * 1000)
     
-    # Remove notas que saíram da tela
     screen_notes[:] = [note for note in screen_notes if note.pos_y < screen_height + note.size[1]]
+    return -1
 
-    
-#Loop Principal
-loop_startTime: int = int(time.perf_counter() * 1000)
-tolerance: int = 12
-
-get_interval_notes() #Rendering all intervals
 
 #Notes hitbox
 def draw_hitbox():
@@ -105,8 +112,29 @@ def draw_hitbox():
 
     pygame.draw.line(screen, (255, 255, 255), (0, 675), (1200, 675), 2)
 
+#Collision settings
+collision_info = queue.Queue() #Collision received data
+
+t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info), daemon = True)
+t_collision_tester.start()
+
+
+#Loop Principal
+loop_startTime: int = int(time.perf_counter() * 1000)
+tolerance: int = 8
+
+get_interval_notes() #Rendering all intervals
+
+# FPS 100 o tempo que a nota 5 hit time + 5 
+# Ter uma nota, quando ela chegar lá em baixo crachar
+valor = 1
 while True:
     current_time: int = int(time.perf_counter() * 1000) - loop_startTime
+
+    if valor == 1:
+        cronometro = current_time
+        print(current_time)
+        valor+=1
 
     screen.fill((28, 28, 28))
     
@@ -117,7 +145,7 @@ while True:
 
      #ação de clicar e soltar a tecla
         if event.type == pygame.KEYDOWN and event.key in input_keys:
-            key_label[event.key] = time.perf_counter()
+            key_label[event.key] = current_time
 
         if event.type == pygame.KEYUP and event.key in input_keys:
             input_start_time = key_label.pop(event.key, None)
@@ -131,7 +159,12 @@ while True:
     spawn_notes(current_time, tolerance)
 
     #Rendering notes
-    draw_notes()
+    atual = draw_notes()
+    if atual is not -1 and valor == 2:
+        atual -= loop_startTime
+        print(f"Atual: {atual}")
+        valor+=1
+
 
     draw_hitbox()
 

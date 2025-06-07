@@ -5,7 +5,7 @@ screen_width: int = 1280
 screen_height: int = 720
 
 note_speed: int = 5
-fps: int = 60
+fps: int = 100
 
 class Note:
     def __init__(self, pos_x, pos_y, hit_time, type_note, end_time, travel_time=None):
@@ -16,7 +16,7 @@ class Note:
         self.type_note = int(type_note)
 
         self.duration = int(self.end_time - self.hit_time) / 1000 #Converting to seconds
-        self.speed = 5
+        self.speed = 10
 
         if travel_time is not None:
             self.compute_size(travel_time)
@@ -72,3 +72,4 @@ def notes_generator(mapped_file: str, note_order: queue.Queue):
             note = Note(str_line[0], str_line[1], str_line[2], str_line[3], str_line[4], travel_time)
 
             note_order.put(note)
+

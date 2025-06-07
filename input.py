@@ -1,6 +1,6 @@
-import pygame
 import queue
 
+hit_pos = 700
 class Input: 
     def __init__(self, key: int, start: float, end: float):
         self.key = key
@@ -8,6 +8,7 @@ class Input:
         self.end = end
         self.duration = end - start
         self.type_event = None
+        self.hitbox = hit_pos
         
     def classify_input(self, time_pressed: float = 0.2):
         if self.duration < time_pressed: self.type_event = "#TAP"
