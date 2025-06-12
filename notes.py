@@ -16,7 +16,7 @@ class Note:
         self.type_note = int(type_note)
 
         self.duration = int(self.end_time - self.hit_time) / 1000 #Converting to seconds
-        self.speed = 10
+        self.speed = (screen_height - 50) * 1.125 / 1000 #velocity per milisecond
 
         if travel_time is not None:
             self.compute_size(travel_time)
@@ -38,20 +38,15 @@ class Note:
 
         self.pos_y = 0
 
-    def fall_note(self):
-        self.pos_y += self.speed
+    def fall_note(self, delta_time: float):
+        self.pos_y += self.speed * delta_time
 
     def compute_size(self, travel_time):
         if self.duration <= 0:
             self.size = (100, 25)
         else:
-            # Corrigindo a fórmula também
             calculated_height = int((self.duration / travel_time) * screen_height)
-            # Aplicando limites para evitar tamanhos impossíveis
-            min_height = 25
-            max_height = int(screen_height * 0.8)  # máximo 80% da tela
-            final_height = max(min_height, min(calculated_height, max_height))
-            self.size = (100, final_height)
+            self.size = (100, calculated_height)
 
         
     

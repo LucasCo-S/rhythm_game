@@ -68,10 +68,10 @@ def spawn_notes(current_time: int, tolerance: int):
 
 sent_notes = set()
 
-def draw_notes() -> int:
+def draw_notes(delta_time: float):
     for note in screen_notes:
         note_rect = note.surf.get_rect(midbottom = (note.pos_x, note.pos_y))
-        note.fall_note()
+        note.fall_note(delta_time)
         screen.blit(note.surf, note_rect)
 
         note_id = id(note)
@@ -79,13 +79,8 @@ def draw_notes() -> int:
             note_info.put(note)
             sent_notes.add(note_id)
 
-        # Remove notas que saíram da tela
-        if note.pos_y > (screen_height + note.size[1]):
-            atual = time.perf_counter()
-            return (atual * 1000)
-    
+    # Remove notes out of screen
     screen_notes[:] = [note for note in screen_notes if note.pos_y < screen_height + note.size[1]]
-    return -1
 
 
 #Notes hitbox
@@ -100,10 +95,11 @@ def draw_hitbox():
     key_three.fill('Blue')
     key_four.fill('Purple')
 
-    one_rect = key_one.get_rect(midbottom = (200, 700))  # Posição fixa para zona de acerto
-    two_rect = key_two.get_rect(midbottom = (400, 700))
-    three_rect = key_three.get_rect(midbottom = (600, 700))
-    four_rect = key_four.get_rect(midbottom = (800, 700))
+    hit_pos_y: int = screen_height - 50
+    one_rect = key_one.get_rect(midbottom = (200, hit_pos_y))  # Posição fixa para zona de acerto
+    two_rect = key_two.get_rect(midbottom = (400, hit_pos_y))
+    three_rect = key_three.get_rect(midbottom = (600, hit_pos_y))
+    four_rect = key_four.get_rect(midbottom = (800, hit_pos_y))
 
     screen.blit(key_one, one_rect)
     screen.blit(key_two, two_rect)
@@ -125,16 +121,11 @@ tolerance: int = 8
 
 get_interval_notes() #Rendering all intervals
 
-# FPS 100 o tempo que a nota 5 hit time + 5 
-# Ter uma nota, quando ela chegar lá em baixo crachar
-valor = 1
 while True:
     current_time: int = int(time.perf_counter() * 1000) - loop_startTime
-
-    if valor == 1:
-        cronometro = current_time
-        print(current_time)
-        valor+=1
+    
+    #Delta time
+    delta_time = clock.tick(FPS)
 
     screen.fill((28, 28, 28))
     
@@ -159,16 +150,10 @@ while True:
     spawn_notes(current_time, tolerance)
 
     #Rendering notes
-    atual = draw_notes()
-    if atual is not -1 and valor == 2:
-        atual -= loop_startTime
-        print(f"Atual: {atual}")
-        valor+=1
-
+    draw_notes(delta_time)
 
     draw_hitbox()
 
-    clock.tick(FPS)
     pygame.display.flip()
     
 
