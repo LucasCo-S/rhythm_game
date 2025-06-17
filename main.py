@@ -9,6 +9,7 @@ from sys import exit
 import notes
 import interface
 from typing import List
+import music
 
 pygame.init()
 
@@ -41,18 +42,15 @@ t_input_listen.start()
 note_data = queue.Queue()#Send to thread
 note_info = queue.Queue()#Receive thread
 
-#Read and Initialization
-note_order = queue.Queue()
-
 selected_music = interface.user_input()
-notes.notes_generator(selected_music, note_order)
+notes.notes_generator(selected_music, note_data)
 
 interval_notes = []
 screen_notes: List[notes.Note] = []
 
 def get_interval_notes():
-    while not note_order.empty():
-        note: notes.Note = note_order.get()
+    while not note_data.empty():
+        note: notes.Note = note_data.get()
         interval_notes.append((note.hit_time, note))
 
 def spawn_notes(current_time: int, tolerance: int):
@@ -108,6 +106,16 @@ def draw_hitbox():
 
     pygame.draw.line(screen, (255, 255, 255), (0, 675), (1200, 675), 2)
 
+
+#Music Settings
+"""
+[0] playing
+[1] unpause
+[2] pause
+"""
+music_status: int = 0
+music.music_init(selected_music)
+
 #Collision settings
 collision_info = queue.Queue() #Collision received data
 
@@ -122,7 +130,7 @@ tolerance: int = 8
 get_interval_notes() #Rendering all intervals
 
 while True:
-    current_time: int = int(time.perf_counter() * 1000) - loop_startTime
+    current_time: float = float(time.perf_counter() * 1000) - loop_startTime
     
     #Delta time
     delta_time = clock.tick(FPS)
@@ -133,6 +141,16 @@ while True:
         if event.type == QUIT:
             pygame.quit()
             exit()
+
+        #Music Control Status
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            if music_status == 0:
+                music_status = 2
+                music.music_controller(music_status= music_status)
+            else:
+                music_status = 1
+                music.music_controller(music_status= music_status)
+                music_status = 0
 
      #ação de clicar e soltar a tecla
         if event.type == pygame.KEYDOWN and event.key in input_keys:

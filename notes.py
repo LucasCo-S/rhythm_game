@@ -1,10 +1,11 @@
 import pygame
 import queue
+from pathlib import Path
+import os
 
 screen_width: int = 1280
 screen_height: int = 720
 
-note_speed: int = 5
 fps: int = 100
 
 class Note:
@@ -16,7 +17,7 @@ class Note:
         self.type_note = int(type_note)
 
         self.duration = int(self.end_time - self.hit_time) / 1000 #Converting to seconds
-        self.speed = (screen_height - 50) * 1.125 / 1000 #velocity per milisecond
+        self.speed = (screen_height - 50) / 1000 #velocity per milisecond
 
         if travel_time is not None:
             self.compute_size(travel_time)
@@ -51,12 +52,13 @@ class Note:
         
     
 def notes_generator(mapped_file: str, note_order: queue.Queue):
-    path: str = "mapped_music/"
-    with open(path + mapped_file, "r") as file:
+    path: str = os.path.join("mapped_music",f"map_{mapped_file}",f"{mapped_file}.txt")
+
+    with open(path, "r") as file:
         file_lines = file.readlines()
     
     # Calcular travel_time uma vez só
-    travel_time = screen_height / (note_speed * fps)
+    travel_time = (screen_height - 50) / 1000
     
     for line in file_lines:
         if line == "pos_x,pos_y,hit_time,type_note,end_time\n": continue
