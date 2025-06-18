@@ -73,10 +73,12 @@ def music_init(music_name: str):
 
     pygame.mixer.init()
     pygame.mixer.music.load(path_music)
-    pygame.mixer.music.play() 
 
 def music_controller(music_status: int):
-    if music_status == 1:
+    if music_status == 0:
+        pygame.mixer.music.play()
+
+    elif music_status == 1:
         pygame.mixer.music.unpause()
 
     elif music_status == 2:

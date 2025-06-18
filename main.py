@@ -23,6 +23,11 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 FPS:int = 100
 clock = pygame.time.Clock()
 
+#Const display
+hit_pos_y: int = screen_height - 50
+note_travel_time: int = 1000 #One second
+
+
 #titulo e icone 
 pygame.display.set_caption("Rhythm Game")
 icon = pygame.image.load('images/logo_img.png')
@@ -53,11 +58,11 @@ def get_interval_notes():
         note: notes.Note = note_data.get()
         interval_notes.append((note.hit_time, note))
 
-def spawn_notes(current_time: int, tolerance: int):
+def spawn_notes(game_time: int, tolerance: int):
     i = 0
     while i < len(interval_notes):
         note_time, note = interval_notes[i]
-        if abs(note_time - current_time) < tolerance:
+        if abs(note_time - game_time) < tolerance:
             screen_notes.append(note)
             interval_notes.pop(i)
         else:
@@ -93,7 +98,6 @@ def draw_hitbox():
     key_three.fill('Blue')
     key_four.fill('Purple')
 
-    hit_pos_y: int = screen_height - 50
     one_rect = key_one.get_rect(midbottom = (200, hit_pos_y))  # Posição fixa para zona de acerto
     two_rect = key_two.get_rect(midbottom = (400, hit_pos_y))
     three_rect = key_three.get_rect(midbottom = (600, hit_pos_y))
@@ -109,11 +113,12 @@ def draw_hitbox():
 
 #Music Settings
 """
-[0] playing
+[0] play
 [1] unpause
 [2] pause
 """
 music_status: int = 0
+music_playing: bool = False 
 music.music_init(selected_music)
 
 #Collision settings
@@ -123,17 +128,29 @@ t_collision_tester = threading.Thread(target = collision.collision_tester, args 
 t_collision_tester.start()
 
 
-#Loop Principal
-loop_startTime: int = int(time.perf_counter() * 1000)
-tolerance: int = 8
-
+#Loop Principal and PreLoads
 get_interval_notes() #Rendering all intervals
 
+tolerance: int = 8
+game_time: float = 0.0
+
+if interval_notes[0][0] - note_travel_time < 0: #Sleep the music until the note travel the needed time
+    music_delay = abs(interval_notes[0][0] - note_travel_time)
+
+else:
+    music_delay = 0
+
+clock.tick(FPS)  #Define game ticks by FPS
+
+game_start_time = time.perf_counter()  #Absolute loop start time
+
 while True:
-    current_time: float = float(time.perf_counter() * 1000) - loop_startTime
+    delta_time = clock.tick(FPS)  #Return the time value of last call
     
-    #Delta time
-    delta_time = clock.tick(FPS)
+    current_time = time.perf_counter()
+    game_time = (current_time - game_start_time) * 1000
+    
+    print(f"Game time: {game_time:.2f}ms, Delta: {delta_time}ms")
 
     screen.fill((28, 28, 28))
     
@@ -144,28 +161,33 @@ while True:
 
         #Music Control Status
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if music_status == 0:
+            if music_playing:
                 music_status = 2
-                music.music_controller(music_status= music_status)
+                music.music_controller(music_status)
+                music_playing = False
             else:
                 music_status = 1
-                music.music_controller(music_status= music_status)
-                music_status = 0
+                music.music_controller(music_status)
+                music_playing = True  # CORREÇÃO: era music_status = True
 
-     #ação de clicar e soltar a tecla
+        #Input Reading
         if event.type == pygame.KEYDOWN and event.key in input_keys:
-            key_label[event.key] = current_time
+            key_label[event.key] = game_time
 
         if event.type == pygame.KEYUP and event.key in input_keys:
             input_start_time = key_label.pop(event.key, None)
 
             if input_start_time is not None:
-                input_end_time = time.perf_counter()
-
+                input_end_time = game_time  # CORREÇÃO: usar game_time ao invés de time.perf_counter()
                 input_data.put((event.key, input_start_time, input_end_time))
 
+    #Music Initialization and Delay
+    if game_time >= music_delay and not music_playing:
+        music.music_controller(music_status)
+        music_playing = True
+    
     #Note geration
-    spawn_notes(current_time, tolerance)
+    spawn_notes(game_time, tolerance)
 
     #Rendering notes
     draw_notes(delta_time)
@@ -173,6 +195,3 @@ while True:
     draw_hitbox()
 
     pygame.display.flip()
-    
-
-

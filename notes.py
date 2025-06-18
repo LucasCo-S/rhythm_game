@@ -16,7 +16,7 @@ class Note:
         self.end_time = int(end_time)
         self.type_note = int(type_note)
 
-        self.duration = int(self.end_time - self.hit_time) / 1000 #Converting to seconds
+        self.duration = int(self.end_time - self.hit_time)
         self.speed = (screen_height - 50) / 1000 #velocity per milisecond
 
         if travel_time is not None:
@@ -45,9 +45,11 @@ class Note:
     def compute_size(self, travel_time):
         if self.duration <= 0:
             self.size = (100, 25)
+
         else:
-            calculated_height = int((self.duration / travel_time) * screen_height)
-            self.size = (100, calculated_height)
+            velocity = (screen_height - 50) / 1000  # 670/1000 = 0.67 pixels/ms
+            calculated_height = int(self.duration * velocity)
+            self.size = (100, max(25, calculated_height))
 
         
     
