@@ -9,8 +9,9 @@ class Input:
         self.duration = end - start
         self.type_event = None
         self.hitbox = hit_pos
+        self.reached = False
         
-    def classify_input(self, time_pressed: float = 0.2):
+    def classify_input(self, time_pressed: float = 300):
         if self.duration < time_pressed: self.type_event = "#TAP"
         else: self.type_event = "#HOLD"
 
@@ -22,7 +23,7 @@ def input_listen(input_data: queue.Queue, input_info: queue.Queue):
             input = Input(key, start, end)
             input.classify_input()
 
-            resultado(input)
+            #resultado(input)
             input_info.put(input)
 
 def resultado(input: Input):

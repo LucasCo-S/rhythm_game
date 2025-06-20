@@ -23,10 +23,11 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 FPS:int = 100
 clock = pygame.time.Clock()
 
+time_updater = queue.Queue() #Send current time for collision
+
 #Const display
 hit_pos_y: int = screen_height - 50
 note_travel_time: int = 1000 #One second
-
 
 #titulo e icone 
 pygame.display.set_caption("Rhythm Game")
@@ -124,7 +125,7 @@ music.music_init(selected_music)
 #Collision settings
 collision_info = queue.Queue() #Collision received data
 
-t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info), daemon = True)
+t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info, time_updater), daemon = True)
 t_collision_tester.start()
 
 
@@ -145,12 +146,12 @@ clock.tick(FPS)  #Define game ticks by FPS
 game_start_time = time.perf_counter()  #Absolute loop start time
 
 while True:
-    delta_time = clock.tick(FPS)  #Return the time value of last call
+    delta_time = clock.tick(FPS) # Return the time value of last call
     
     current_time = time.perf_counter()
     game_time = (current_time - game_start_time) * 1000
-    
-    print(f"Game time: {game_time:.2f}ms, Delta: {delta_time}ms")
+
+    time_updater.put(game_time)
 
     screen.fill((28, 28, 28))
     
