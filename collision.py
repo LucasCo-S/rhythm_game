@@ -59,7 +59,7 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
         #Clean up both lists before collision checking
         cleanLists(readed_inputs, readed_notes, game_time)
 
-        interval_hit = 600
+        interval_hit = 3000
 
         for input_ in new_inputs:
             if input_.reached:
@@ -97,7 +97,3 @@ def cleanLists(inputs_list: List[input.Input], notes_list: List[notes.Note], gam
     
     #Excluding if it's has been processed
     inputs_list[:] = [input for input in inputs_list if not input.reached]
-        
-
-        
-        
