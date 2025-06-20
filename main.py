@@ -23,10 +23,10 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 FPS:int = 100
 clock = pygame.time.Clock()
 
-time_updater = queue.Queue() #Send current time for collision
+shared_time = collision.SharedTime() #Send current time for collision
 
 #Const display
-hit_pos_y: int = screen_height - 50
+hit_pos_y: int = screen_height - (screen_height * 0.15)
 note_travel_time: int = 1000 #One second
 
 #titulo e icone 
@@ -79,7 +79,7 @@ def draw_notes(delta_time: float):
         screen.blit(note.surf, note_rect)
 
         note_id = id(note)
-        if (note.pos_y > 600 and note.pos_y < 750 and note_id not in sent_notes):
+        if (note.pos_y > (hit_pos_y - 50) and note.pos_y < (hit_pos_y + 50) and note_id not in sent_notes):
             note_info.put(note)
             sent_notes.add(note_id)
 
@@ -89,27 +89,7 @@ def draw_notes(delta_time: float):
 
 #Notes hitbox
 def draw_hitbox():
-    key_one = pygame.Surface((100, 50))
-    key_two = pygame.Surface((100, 50))
-    key_three = pygame.Surface((100, 50))
-    key_four = pygame.Surface((100, 50))
-
-    key_one.fill('Orange')
-    key_two.fill('Green')
-    key_three.fill('Blue')
-    key_four.fill('Purple')
-
-    one_rect = key_one.get_rect(midbottom = (200, hit_pos_y))  # Posição fixa para zona de acerto
-    two_rect = key_two.get_rect(midbottom = (400, hit_pos_y))
-    three_rect = key_three.get_rect(midbottom = (600, hit_pos_y))
-    four_rect = key_four.get_rect(midbottom = (800, hit_pos_y))
-
-    screen.blit(key_one, one_rect)
-    screen.blit(key_two, two_rect)
-    screen.blit(key_three, three_rect)
-    screen.blit(key_four, four_rect)
-
-    pygame.draw.line(screen, (255, 255, 255), (0, 675), (1200, 675), 2)
+    pygame.draw.line(screen, (255, 255, 255), (0, hit_pos_y), (1200, hit_pos_y), 2)
 
 
 #Music Settings
@@ -125,7 +105,7 @@ music.music_init(selected_music)
 #Collision settings
 collision_info = queue.Queue() #Collision received data
 
-t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info, time_updater), daemon = True)
+t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info, shared_time), daemon = True)
 t_collision_tester.start()
 
 
@@ -151,7 +131,7 @@ while True:
     current_time = time.perf_counter()
     game_time = (current_time - game_start_time) * 1000
 
-    time_updater.put(game_time)
+    shared_time.update(game_time)
 
     screen.fill((28, 28, 28))
     

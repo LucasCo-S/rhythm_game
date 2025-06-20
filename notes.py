@@ -15,6 +15,7 @@ class Note:
         self.hit_time = int(hit_time)
         self.end_time = int(end_time)
         self.type_note = int(type_note)
+        self.reached = False
 
         self.duration = int(self.end_time - self.hit_time)
         self.speed = (screen_height - 50) / 1000 #velocity per milisecond
