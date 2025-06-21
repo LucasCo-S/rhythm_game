@@ -1,6 +1,8 @@
 import queue
 
-hit_pos = 700
+screen_height: int = 720
+
+hit_pos = screen_height - (screen_height * 0.15)
 class Input: 
     def __init__(self, key: int, start: float, end: float):
         self.key = key

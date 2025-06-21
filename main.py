@@ -6,6 +6,7 @@ import input
 import collision
 from pygame.locals import *
 from sys import exit
+import interface.interface
 import notes
 import interface
 from typing import List
@@ -47,9 +48,6 @@ t_input_listen.start()
 #Notes settings
 note_data = queue.Queue()#Send to thread
 note_info = queue.Queue()#Receive thread
-
-selected_music = interface.user_input()
-notes.notes_generator(selected_music, note_data)
 
 interval_notes = []
 screen_notes: List[notes.Note] = []
@@ -98,9 +96,8 @@ def draw_hitbox():
 [1] unpause
 [2] pause
 """
-music_status: int = 0
-music_playing: bool = False 
-music.music_init(selected_music)
+music_status: int
+music_playing: bool
 
 #Collision settings
 collision_info = queue.Queue() #Collision received data
@@ -110,69 +107,62 @@ t_collision_tester.start()
 
 
 #Loop Principal and PreLoads
-get_interval_notes() #Rendering all intervals
-
-tolerance: int = 8
-game_time: float = 0.0
-
-if interval_notes[0][0] - note_travel_time < 0: #Sleep the music until the note travel the needed time
-    music_delay = abs(interval_notes[0][0] - note_travel_time)
-
-else:
-    music_delay = 0
-
 clock.tick(FPS)  #Define game ticks by FPS
 
-game_start_time = time.perf_counter()  #Absolute loop start time
+def game_loop():
+    selected_music = interface.interface.user_input()
+    notes.notes_generator(selected_music, note_data)
 
-while True:
-    delta_time = clock.tick(FPS) # Return the time value of last call
-    
-    current_time = time.perf_counter()
-    game_time = (current_time - game_start_time) * 1000
+    music.music_init(selected_music)
 
-    shared_time.update(game_time)
+    get_interval_notes()
+    game_start_time = time.perf_counter()
+    tolerance = 8
+    music_playing = False
+    music_status = 0
 
-    screen.fill((28, 28, 28))
-    
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            pygame.quit()
-            exit()
+    if interval_notes[0][0] - note_travel_time < 0:
+        music_delay = abs(interval_notes[0][0] - note_travel_time)
+    else:
+        music_delay = 0
 
-        #Music Control Status
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if music_playing:
-                music_status = 2
-                music.music_controller(music_status)
-                music_playing = False
-            else:
-                music_status = 1
-                music.music_controller(music_status)
-                music_playing = True  # CORREÇÃO: era music_status = True
+    sent_notes.clear()
+    screen_notes.clear()
 
-        #Input Reading
-        if event.type == pygame.KEYDOWN and event.key in input_keys:
-            key_label[event.key] = game_time
+    while True:
+        delta_time = clock.tick(FPS)
+        current_time = time.perf_counter()
+        game_time = (current_time - game_start_time) * 1000
+        shared_time.update(game_time)
 
-        if event.type == pygame.KEYUP and event.key in input_keys:
-            input_start_time = key_label.pop(event.key, None)
+        screen.fill((28, 28, 28))
 
-            if input_start_time is not None:
-                input_end_time = game_time  # CORREÇÃO: usar game_time ao invés de time.perf_counter()
-                input_data.put((event.key, input_start_time, input_end_time))
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                exit()
 
-    #Music Initialization and Delay
-    if game_time >= music_delay and not music_playing:
-        music.music_controller(music_status)
-        music_playing = True
-    
-    #Note geration
-    spawn_notes(game_time, tolerance)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return  # Volta ao menu ao apertar ESC
+            
+            if event.type == pygame.KEYDOWN and event.key in input_keys:
+                key_label[event.key] = game_time
 
-    #Rendering notes
-    draw_notes(delta_time)
+            if event.type == pygame.KEYUP and event.key in input_keys:
+                input_start_time = key_label.pop(event.key, None)
 
-    draw_hitbox()
+                if input_start_time is not None:
+                    input_end_time = game_time
+                    input_data.put((event.key, input_start_time, input_end_time))
 
-    pygame.display.flip()
+        if game_time >= music_delay and not music_playing:
+            music.music_controller(music_status)
+            music_playing = True
+
+        spawn_notes(game_time, tolerance)
+        draw_notes(delta_time)
+        draw_hitbox()
+
+        pygame.display.flip()
+
+game_loop()

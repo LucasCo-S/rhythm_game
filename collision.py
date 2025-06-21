@@ -28,31 +28,40 @@ class Collision_Record:
         self.precision = None
         self.type = note.type_note 
         self.points = None
+        self.delta_precision = None
 
+    
     def compute_precision(self):
         precision_label = {
-            80 : "PERFECT",
-            100 : "GREAT",
-            150 : "GOOD",
-            300 : "BAD",
-            -1 : "MISS"
+            80: "PERFECT",
+            100: "GREAT", 
+            150: "GOOD",
+            300: "BAD",
+            -1: "MISS"
         }
 
         if self.type != 128:
-            precision = self.note_info.hit_time - self.input_info.start #Precision based in hit time
+            precision = abs(self.note_info.hit_time - self.input_info.start) # Precision based on hit time
+        elif self.type == 128:
+            precision = abs(self.note_info.duration - self.input_info.duration)  # Precision based on hold time
         else:
-            precision = abs(self.note_info.duration - self.input_info.duration) #Precision based in hold time
+            precision = -1
+
+        self.delta_precision = precision
         
-        if precision >= 300:
-            self.precision = precision_label[300]
-        if precision >= 150:
-            self.precision = precision_label[150]
-        if precision >= 100:
-            self.precision = precision_label[100]
-        if precision >= 0 and precision <= 80:
-            self.precision = precision_label[80]
+        # Determine precision category based on timing difference
+        if precision == -1:
+            self.precision = precision_label[-1]  # MISS
+        elif precision <= 80:
+            self.precision = precision_label[80]  # PERFECT
+        elif precision <= 100:
+            self.precision = precision_label[100]  # GREAT
+        elif precision <= 150:
+            self.precision = precision_label[150]  # GOOD
+        elif precision <= 300:
+            self.precision = precision_label[300]  # BAD
         else:
-            self.precision = precision[-1]
+            self.precision = precision_label[-1]  # MISS 
     
     def compute_points(self):
         points_label = {
@@ -63,7 +72,7 @@ class Collision_Record:
             "MISS" : 0
         }
 
-        self.point = points_label[self.precision]
+        self.points = points_label[self.precision]
 
 
 
@@ -143,6 +152,8 @@ def hit_collision(readed_inputs: List[input.Input], readed_notes: List[notes.Not
             collision_hit = Collision_Record(note_, input_)
             collision_hit.compute_precision()
             collision_hit.compute_points()
+
+            print(f"Precision{collision_hit.precision}")
             
             #Packing data for futher use
             collision_info.put(collision_hit)
