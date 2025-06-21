@@ -23,9 +23,49 @@ class SharedTime:
 # Classify collision status from notes and inputs matched
 class Collision_Record:
     def __init__(self, note: notes.Note, input: input.Input):
+        self.note_info = note
+        self.input_info = input
         self.precision = None
         self.type = note.type_note 
         self.points = None
+
+    def compute_precision(self):
+        precision_label = {
+            80 : "PERFECT",
+            100 : "GREAT",
+            150 : "GOOD",
+            300 : "BAD",
+            -1 : "MISS"
+        }
+
+        if self.type != 128:
+            precision = self.note_info.hit_time - self.input_info.start #Precision based in hit time
+        else:
+            precision = abs(self.note_info.duration - self.input_info.duration) #Precision based in hold time
+        
+        if precision >= 300:
+            self.precision = precision_label[300]
+        if precision >= 150:
+            self.precision = precision_label[150]
+        if precision >= 100:
+            self.precision = precision_label[100]
+        if precision >= 0 and precision <= 80:
+            self.precision = precision_label[80]
+        else:
+            self.precision = precision[-1]
+    
+    def compute_points(self):
+        points_label = {
+            "PERFECT" : 500,
+            "GREAT" : 300,
+            "GOOD" : 100,
+            "BAD" : 50,
+            "MISS" : 0
+        }
+
+        self.point = points_label[self.precision]
+
+
 
 # Thread that receive data from main
 def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_info: queue.Queue, shared_time: SharedTime):
@@ -101,6 +141,10 @@ def hit_collision(readed_inputs: List[input.Input], readed_notes: List[notes.Not
             
             #Send to collision class to classify hit
             collision_hit = Collision_Record(note_, input_)
+            collision_hit.compute_precision()
+            collision_hit.compute_points()
+            
+            #Packing data for futher use
             collision_info.put(collision_hit)
 
 # Clean lists to ensure the data is relevant
