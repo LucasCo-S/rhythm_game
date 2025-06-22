@@ -1,23 +1,28 @@
+#Libraries Imports
 import pygame
 import time
 import queue
 import threading
-import input
-import collision
 from pygame.locals import *
 from sys import exit
-import interface.interface
-import notes
-import interface
 from typing import List
-import music
 
+#Modules Import
+import input
+import collision
+import interface.menu
+import interface.music_select
+import notes
+import music
+import interface
+
+#Initilizing game
 pygame.init()
 
+#Screen Settings
 screen_width: int = 1280
 screen_height: int = 720
 
-#criação da tela
 screen = pygame.display.set_mode((screen_width, screen_height))
 
 #Time handle
@@ -26,12 +31,12 @@ clock = pygame.time.Clock()
 
 shared_time = collision.SharedTime() #Send current time for collision
 
-#Const display
+#Hit settings
 hit_pos_y: int = screen_height - (screen_height * 0.15)
 note_travel_time: int = 1000 #One second
 
-#titulo e icone 
-pygame.display.set_caption("Rhythm Game")
+#Game Icon and Title
+pygame.display.set_caption("Rhyphos")
 icon = pygame.image.load('images/logo_img.png')
 pygame.display.set_icon(icon)
 
@@ -42,7 +47,7 @@ input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 input_data = queue.Queue()#Send to thread
 input_info = queue.Queue()#Receive from thread
 
-t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True) #daemon serve para finalizar a thread quando finaliza o programa
+t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True)
 t_input_listen.start()
 
 #Notes settings
@@ -84,8 +89,10 @@ def draw_notes(delta_time: float):
     # Remove notes out of screen
     screen_notes[:] = [note for note in screen_notes if note.pos_y < screen_height + note.size[1]]
 
+#Hit settings
+hit_pos_y: int = screen_height - (screen_height * 0.15)
+note_travel_time: int = 1000 #One second
 
-#Notes hitbox
 def draw_hitbox():
     pygame.draw.line(screen, (255, 255, 255), (0, hit_pos_y), (1200, hit_pos_y), 2)
 
@@ -106,7 +113,7 @@ t_collision_tester = threading.Thread(target = collision.collision_tester, args 
 t_collision_tester.start()
 
 
-#Loop Principal and PreLoads
+#Principal Loop and PreLoads
 clock.tick(FPS)  #Define game ticks by FPS
 
 def game_loop():
@@ -139,8 +146,7 @@ def game_loop():
 
         for event in pygame.event.get():
             if event.type == QUIT:
-                pygame.quit()
-                exit()
+                return 'exit'
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return  # Volta ao menu ao apertar ESC
@@ -165,4 +171,32 @@ def game_loop():
 
         pygame.display.flip()
 
-game_loop()
+#Screen Handle
+def main():
+    #Screen Label
+    screens_label = {
+        'menu' : interface.menu.menu_screen,
+        'select_music' : interface.music_select.select_screen,
+    }
+
+    current_screen = 'menu'
+
+    while True:
+        if current_screen == 'menu':
+            current_screen = screens_label[current_screen](screen, screen_width, screen_height)
+
+        elif current_screen == 'select_music':
+            current_screen = screens_label[current_screen](screen, screen_width, screen_height)
+
+        elif current_screen == 'game':
+            game_loop()
+            current_screen = 'menu'
+
+        elif current_screen == 'exit':
+            pygame.quit()
+            exit()
+
+if __name__ == "__main__":
+    main()
+
+
