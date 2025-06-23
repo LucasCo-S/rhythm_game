@@ -1,6 +1,6 @@
 import pygame
 
-def menu_screen(screen, screen_width, screen_height):
+def menu_screen(screen: pygame.Surface, screen_width: int, screen_height: int):
 
     pygame.font.init()
 
@@ -10,8 +10,8 @@ def menu_screen(screen, screen_width, screen_height):
         #Game title
         font = pygame.font.SysFont(None, 72)
 
-        title = font.render("Rhyphos", True, (255, 255, 255))
-        title_pos = (screen_width // 2 - title.get_width() // 2, 150) #'//' Return a integer valur
+        title = font.render("Rhyphos", False, (255, 255, 255))
+        title_pos = (screen_width // 2 - title.get_width() // 2, 150) #'//' Return a integer value
 
         screen.blit(title, title_pos)
 

@@ -2,7 +2,7 @@ import pygame
 import queue
 import time
 import notes
-import input
+import inputs
 import threading
 from typing import List
 
@@ -22,7 +22,7 @@ class SharedTime:
 
 # Classify collision status from notes and inputs matched
 class Collision_Record:
-    def __init__(self, note: notes.Note, input: input.Input):
+    def __init__(self, note: notes.Note, input: inputs.Input):
         self.note_info = note
         self.input_info = input
         self.precision = None
@@ -80,7 +80,7 @@ class Collision_Record:
 def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_info: queue.Queue, shared_time: SharedTime):
 
     #Lists with inputs and notes values
-    readed_inputs: List[input.Input] = []
+    readed_inputs: List[inputs.Input] = []
     readed_notes: List[notes.Note] = []
 
     while True:
@@ -88,10 +88,10 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
         game_time: float = shared_time.get()
         
         # Collect NEW data from queues
-        new_inputs: List[input.Input] = []
+        new_inputs: List[inputs.Input] = []
         while not input_info.empty():
             try:
-                input_r: input.Input = input_info.get_nowait()
+                input_r: inputs.Input = input_info.get_nowait()
                 new_inputs.append(input_r)
                 readed_inputs.append(input_r)
             except queue.Empty:
@@ -112,7 +112,7 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
         time.sleep(0.01)
 
 # Identify collision from hold and tap notes
-def hit_collision(readed_inputs: List[input.Input], readed_notes: List[notes.Note], new_inputs: List[input.Input], collision_info: queue.Queue):
+def hit_collision(readed_inputs: List[inputs.Input], readed_notes: List[notes.Note], new_inputs: List[inputs.Input], collision_info: queue.Queue):
     keys_label = {
         pygame.K_a: 200,
         pygame.K_s: 400,
@@ -159,7 +159,7 @@ def hit_collision(readed_inputs: List[input.Input], readed_notes: List[notes.Not
             collision_info.put(collision_hit)
 
 # Clean lists to ensure the data is relevant
-def cleanLists(inputs_list: List[input.Input], notes_list: List[notes.Note], game_time: float):
+def cleanLists(inputs_list: List[inputs.Input], notes_list: List[notes.Note], game_time: float):
     keys_label = {
         pygame.K_a : 200,
         pygame.K_s : 400,

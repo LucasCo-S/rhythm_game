@@ -8,7 +8,7 @@ from sys import exit
 from typing import List
 
 #Modules Import
-import input
+import inputs
 import collision
 import interface.menu
 import interface.music_select
@@ -47,7 +47,7 @@ input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 input_data = queue.Queue()#Send to thread
 input_info = queue.Queue()#Receive from thread
 
-t_input_listen = threading.Thread(target = input.input_listen, args=(input_data, input_info), daemon = True)
+t_input_listen = threading.Thread(target = inputs.input_listen, args=(input_data, input_info), daemon = True)
 t_input_listen.start()
 
 #Notes settings
@@ -116,8 +116,7 @@ t_collision_tester.start()
 #Principal Loop and PreLoads
 clock.tick(FPS)  #Define game ticks by FPS
 
-def game_loop():
-    selected_music = interface.interface.user_input()
+def game_loop(selected_music: str):
     notes.notes_generator(selected_music, note_data)
 
     music.music_init(selected_music)
@@ -146,7 +145,8 @@ def game_loop():
 
         for event in pygame.event.get():
             if event.type == QUIT:
-                return 'exit'
+                pygame.quit()
+                exit()
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return  # Volta ao menu ao apertar ESC
@@ -180,16 +180,17 @@ def main():
     }
 
     current_screen = 'menu'
+    selected_music: str
 
     while True:
         if current_screen == 'menu':
             current_screen = screens_label[current_screen](screen, screen_width, screen_height)
 
         elif current_screen == 'select_music':
-            current_screen = screens_label[current_screen](screen, screen_width, screen_height)
+            current_screen, selected_music = screens_label[current_screen](screen, screen_width, screen_height)
 
         elif current_screen == 'game':
-            game_loop()
+            game_loop(selected_music)
             current_screen = 'menu'
 
         elif current_screen == 'exit':
