@@ -10,8 +10,10 @@ from typing import List
 #Modules Import
 import inputs
 import collision
+import interface.game_score
 import interface.menu
 import interface.music_select
+import interface.settings
 import notes
 import music
 import interface
@@ -42,7 +44,6 @@ pygame.display.set_icon(icon)
 
 #Input settings
 key_label = {}
-input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 
 input_data = queue.Queue()#Send to thread
 input_info = queue.Queue()#Receive from thread
@@ -122,6 +123,9 @@ def game_loop(selected_music: str):
     music.music_init(selected_music)
 
     get_interval_notes()
+    last_note = interval_notes[-1][0] if interval_notes else 0
+    margin_end = 2000
+
     game_start_time = time.perf_counter()
     tolerance = 8
     music_playing = False
@@ -134,6 +138,11 @@ def game_loop(selected_music: str):
 
     sent_notes.clear()
     screen_notes.clear()
+
+    #Getting User Settings
+    input_keys = inputs.load_user_settings()
+
+    #Game Over
 
     while True:
         delta_time = clock.tick(FPS)
@@ -169,7 +178,11 @@ def game_loop(selected_music: str):
         draw_notes(delta_time)
         draw_hitbox()
 
+        if (game_time > last_note + margin_end and not screen_notes and not pygame.mixer.music.get_busy()):
+            return 'score'
+
         pygame.display.flip()
+
 
 #Screen Handle
 def main():
@@ -177,6 +190,8 @@ def main():
     screens_label = {
         'menu' : interface.menu.menu_screen,
         'select_music' : interface.music_select.select_screen,
+        'settings' : interface.settings.settings_screen,
+        'score' : interface.game_score.score_screen,
     }
 
     current_screen = 'menu'
@@ -189,9 +204,15 @@ def main():
         elif current_screen == 'select_music':
             current_screen, selected_music = screens_label[current_screen](screen, screen_width, screen_height)
 
+        elif current_screen == 'settings':
+            current_screen = screens_label[current_screen](screen, screen_width, screen_height)
+
+        elif current_screen == 'score':
+            current_screen = screens_label[current_screen](screen, screen_width, screen_height, collision_info)
+
         elif current_screen == 'game':
-            game_loop(selected_music)
-            current_screen = 'menu'
+            current_screen = game_loop(selected_music)
+            
 
         elif current_screen == 'exit':
             pygame.quit()
