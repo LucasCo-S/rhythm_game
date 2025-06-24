@@ -21,6 +21,9 @@ def select_screen(screen: pygame.Surface, screen_width: int, screen_height: int)
         rect = pygame.Rect(x, y, button_width, button_height)
         buttons.append((music, rect))
 
+    #Return
+    return_rect = pygame.Rect(40, 600, 150, 40)
+
     while True:
         screen.fill((10, 10, 10))
         
@@ -41,6 +44,10 @@ def select_screen(screen: pygame.Surface, screen_width: int, screen_height: int)
             text_rect = text.get_rect(center=rect.center)
             screen.blit(text, text_rect)
 
+        #Return Button
+        pygame.draw.rect(screen, (80, 80, 80), return_rect)
+        screen.blit(musics_font.render("Voltar", True, (255, 255, 255)), (return_rect.x + 10, return_rect.y + 5))
+
         #Display Update
         pygame.display.flip()
 
@@ -50,9 +57,13 @@ def select_screen(screen: pygame.Surface, screen_width: int, screen_height: int)
                 return 'exit'
             
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if return_rect.collidepoint(event.pos):
+                    return ("menu", None)
+                
                 for music, rect in buttons:
                     if rect.collidepoint(event.pos):
                         return ("game", music)
+                
 
 def music_list() -> List[str]:
     mapped_music_path: str = "mapped_music/"

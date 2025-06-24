@@ -195,7 +195,7 @@ def main():
     }
 
     current_screen = 'menu'
-    selected_music: str
+    selected_music = None
 
     while True:
         if current_screen == 'menu':

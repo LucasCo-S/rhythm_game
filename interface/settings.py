@@ -70,7 +70,7 @@ def settings_screen(screen: pygame.Surface, screen_width: int, screen_height: in
 
             screen.blit(msg, (rect.x + 10, rect.y + 5))
 
-        # Botão voltar
+        #Return Button
         pygame.draw.rect(screen, (80, 80, 80), return_rect)
         screen.blit(font.render("Voltar", True, (255, 255, 255)), (return_rect.x + 10, return_rect.y + 5))
 
