@@ -1,4 +1,7 @@
 import queue
+import json
+from typing import List
+import pygame
 
 screen_height: int = 720
 
@@ -30,3 +33,13 @@ def input_listen(input_data: queue.Queue, input_info: queue.Queue):
 
 def resultado(input: Input):
     print(f"Tecla: {input.key}, Tipo: {input.type_event}, Começo/Fim: {input.start}/{input.end}, Duração: {input.duration}")
+
+#User Settings
+def load_user_settings(user_path: str = "settings/user.json") -> List: 
+    with open(user_path, "r", encoding = "utf-8") as file:
+        settings = json.load(file)
+    
+    keys_dict = settings["keys"]
+    
+    keys_list = [pygame.key.key_code(key) for key in keys_dict.values()]
+    return keys_list

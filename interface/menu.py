@@ -55,8 +55,8 @@ def menu_screen(screen: pygame.Surface, screen_width: int, screen_height: int):
                 if play_rect.collidepoint(event.pos):
                     return 'select_music'
                 
-                if settings_rect.colliderect(event.pos):
+                if settings_rect.collidepoint(event.pos):
                     return 'settings'
                 
-                if exit_rect.colliderect(event.pos):
+                if exit_rect.collidepoint(event.pos):
                     return 'exit'

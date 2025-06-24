@@ -12,6 +12,7 @@ import inputs
 import collision
 import interface.menu
 import interface.music_select
+import interface.settings
 import notes
 import music
 import interface
@@ -42,7 +43,6 @@ pygame.display.set_icon(icon)
 
 #Input settings
 key_label = {}
-input_keys = [pygame.K_a, pygame.K_s, pygame.K_k, pygame.K_l]
 
 input_data = queue.Queue()#Send to thread
 input_info = queue.Queue()#Receive from thread
@@ -135,6 +135,9 @@ def game_loop(selected_music: str):
     sent_notes.clear()
     screen_notes.clear()
 
+    #Getting User Settings
+    input_keys = inputs.load_user_settings()
+
     while True:
         delta_time = clock.tick(FPS)
         current_time = time.perf_counter()
@@ -177,6 +180,7 @@ def main():
     screens_label = {
         'menu' : interface.menu.menu_screen,
         'select_music' : interface.music_select.select_screen,
+        'settings' : interface.settings.settings_screen,
     }
 
     current_screen = 'menu'
@@ -188,6 +192,9 @@ def main():
 
         elif current_screen == 'select_music':
             current_screen, selected_music = screens_label[current_screen](screen, screen_width, screen_height)
+
+        elif current_screen == 'settings':
+            current_screen = screens_label[current_screen](screen, screen_width, screen_height)
 
         elif current_screen == 'game':
             game_loop(selected_music)
