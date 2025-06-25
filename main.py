@@ -73,7 +73,6 @@ def spawn_notes(game_time: int, tolerance: int):
         else:
             i += 1
 
-
 sent_notes = set()
 
 def draw_notes(delta_time: float):
@@ -90,20 +89,95 @@ def draw_notes(delta_time: float):
     # Remove notes out of screen
     screen_notes[:] = [note for note in screen_notes if note.pos_y < screen_height + note.size[1]]
 
-#Hit settings
-hit_pos_y: int = screen_height - (screen_height * 0.15)
-note_travel_time: int = 1000 #One second
+# Visual styling class
+class GameVisuals:
+    def __init__(self):
+        self.button_positions = [400, 550, 700, 850]
+        self.button_colors = {
+            400: (255, 80, 80),   # Red
+            550: (80, 255, 80),   # Green  
+            700: (80, 80, 255),   # Blue
+            850: (255, 255, 80)   # Yellow
+        }
+        self.button_pressed = {pos: False for pos in self.button_positions}
+        self.button_press_time = {pos: 0 for pos in self.button_positions}
+    
+    def create_gradient_background(self, surface):
+        """Creates a smooth dark gradient background"""
+        for y in range(screen_height):
+            ratio = y / screen_height
+            # Dark gradient from deep blue to purple
+            r = int(20 + (35 - 20) * ratio)
+            g = int(15 + (25 - 15) * ratio) 
+            b = int(40 + (60 - 40) * ratio)
+            pygame.draw.line(surface, (r, g, b), (0, y), (screen_width, y))
+    
+    def draw_hitbox_buttons(self, surface, current_time):
+        """Draws stylized buttons at note positions"""
+        button_width = 90
+        button_height = 50
+        
+        for pos_x in self.button_positions:
+            # Check if button should be pressed
+            is_pressed = self.button_pressed[pos_x]
+            
+            # Button colors
+            base_color = self.button_colors[pos_x]
+            
+            if is_pressed:
+                # Pressed state - brighter
+                color = tuple(min(255, int(c * 1.3)) for c in base_color)
+                border_color = (255, 255, 255)
+            else:
+                # Normal state - dimmer
+                color = tuple(int(c * 0.6) for c in base_color)
+                border_color = tuple(int(c * 0.8) for c in base_color)
+            
+            # Button rectangle
+            button_rect = pygame.Rect(pos_x - button_width//2, hit_pos_y - button_height//2, 
+                                    button_width, button_height)
+            
+            # Draw button shadow
+            shadow_rect = pygame.Rect(button_rect.x + 2, button_rect.y + 2, 
+                                    button_width, button_height)
+            pygame.draw.rect(surface, (0, 0, 0, 100), shadow_rect, border_radius=8)
+            
+            # Draw button background
+            pygame.draw.rect(surface, color, button_rect, border_radius=8)
+            
+            # Draw button border
+            pygame.draw.rect(surface, border_color, button_rect, width=2, border_radius=8)
+            
+            # Draw inner glow when pressed
+            if is_pressed:
+                inner_rect = pygame.Rect(button_rect.x + 4, button_rect.y + 4,
+                                       button_width - 8, button_height - 8)
+                glow_color = tuple(min(255, int(c * 1.5)) for c in base_color)
+                glow_surface = pygame.Surface((button_width - 8, button_height - 8), pygame.SRCALPHA)
+                pygame.draw.rect(glow_surface, (*glow_color, 80), glow_surface.get_rect(), border_radius=6)
+                surface.blit(glow_surface, (inner_rect.x, inner_rect.y))
+    
+    def press_button(self, pos_x):
+        """Activates button press effect"""
+        if pos_x in self.button_pressed:
+            self.button_pressed[pos_x] = True
+    
+    def release_button(self, pos_x):
+        """Deactivates button press effect"""
+        if pos_x in self.button_pressed:
+            self.button_pressed[pos_x] = False
 
-def draw_hitbox():
-    pygame.draw.line(screen, (255, 255, 255), (0, hit_pos_y), (1200, hit_pos_y), 2)
+# Initialize visuals
+game_visuals = GameVisuals()
+
+def draw_stylized_hitbox():
+    """Draws an enhanced hitbox line"""
+    # Draw glowing hitbox line
+    pygame.draw.line(screen, (100, 150, 255), (0, hit_pos_y), (screen_width, hit_pos_y), 4)
+    pygame.draw.line(screen, (200, 220, 255), (0, hit_pos_y), (screen_width, hit_pos_y), 2)
 
 
 #Music Settings
-"""
-[0] play
-[1] unpause
-[2] pause
-"""
 music_status: int
 music_playing: bool
 
@@ -113,13 +187,11 @@ collision_info = queue.Queue() #Collision received data
 t_collision_tester = threading.Thread(target = collision.collision_tester, args = (input_info, note_info, collision_info, shared_time), daemon = True)
 t_collision_tester.start()
 
-
 #Principal Loop and PreLoads
 clock.tick(FPS)  #Define game ticks by FPS
 
 def game_loop(selected_music: str):
     notes.notes_generator(selected_music, note_data)
-
     music.music_init(selected_music)
 
     get_interval_notes()
@@ -141,8 +213,13 @@ def game_loop(selected_music: str):
 
     #Getting User Settings
     input_keys = inputs.load_user_settings()
-
-    #Game Over
+    
+    # Map input keys to button positions
+    key_to_position = {}
+    if len(input_keys) >= 4:
+        positions = [400, 550, 700, 850]
+        for i, key in enumerate(sorted(input_keys)[:4]):
+            key_to_position[key] = positions[i]
 
     while True:
         delta_time = clock.tick(FPS)
@@ -150,7 +227,8 @@ def game_loop(selected_music: str):
         game_time = (current_time - game_start_time) * 1000
         shared_time.update(game_time)
 
-        screen.fill((28, 28, 28))
+        # Create gradient background
+        game_visuals.create_gradient_background(screen)
 
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -162,9 +240,15 @@ def game_loop(selected_music: str):
             
             if event.type == pygame.KEYDOWN and event.key in input_keys:
                 key_label[event.key] = game_time
+                # Activate button visual effect
+                if event.key in key_to_position:
+                    game_visuals.press_button(key_to_position[event.key])
 
             if event.type == pygame.KEYUP and event.key in input_keys:
                 input_start_time = key_label.pop(event.key, None)
+                # Deactivate button visual effect
+                if event.key in key_to_position:
+                    game_visuals.release_button(key_to_position[event.key])
 
                 if input_start_time is not None:
                     input_end_time = game_time
@@ -176,13 +260,13 @@ def game_loop(selected_music: str):
 
         spawn_notes(game_time, tolerance)
         draw_notes(delta_time)
-        draw_hitbox()
+        draw_stylized_hitbox()
+        game_visuals.draw_hitbox_buttons(screen, game_time)
 
         if (game_time > last_note + margin_end and not screen_notes and not pygame.mixer.music.get_busy()):
             return 'score'
 
         pygame.display.flip()
-
 
 #Screen Handle
 def main():
@@ -212,7 +296,6 @@ def main():
 
         elif current_screen == 'game':
             current_screen = game_loop(selected_music)
-            
 
         elif current_screen == 'exit':
             pygame.quit()
@@ -220,5 +303,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

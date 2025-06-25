@@ -1,62 +1,58 @@
 import pygame
+from interface.game_score import create_modern_background, draw_modern_button
 
 def menu_screen(screen: pygame.Surface, screen_width: int, screen_height: int):
-
     pygame.font.init()
 
+    try:
+        title_font = pygame.font.Font(None, 72)
+        button_font = pygame.font.Font(None, 40)
+    except:
+        title_font = pygame.font.SysFont('arial', 72)
+        button_font = pygame.font.SysFont('arial', 40)
+
+    clock = pygame.time.Clock()
+
+    button_width = 280
+    button_height = 50
+    spacing = 30
+
+    buttons = [
+        {"label": "INICIAR", "action": "select_music"},
+        {"label": "CONFIGURAÇÕES", "action": "settings"},
+        {"label": "SAIR", "action": "exit"},
+    ]
+
     while True:
-        screen.fill((10, 10, 10))
-        
-        #Game title
-        font = pygame.font.SysFont(None, 72)
+        create_modern_background(screen, screen_width, screen_height)
 
-        title = font.render("Rhyphos", False, (255, 255, 255))
-        title_pos = (screen_width // 2 - title.get_width() // 2, 150) #'//' Return a integer value
+        # Título centralizado
+        title = title_font.render("Rhyphos", True, (240, 240, 255))
+        title_rect = title.get_rect(center=(screen_width // 2, 120))
+        screen.blit(title, title_rect)
 
-        screen.blit(title, title_pos)
+        mouse_pos = pygame.mouse.get_pos()
 
-        #Selection buttons
-        font_small = pygame.font.SysFont(None, 48)
+        for i, button in enumerate(buttons):
+            x = screen_width // 2 - button_width // 2
+            y = 250 + i * (button_height + spacing)
 
-        #Play button
-        play_button = font_small.render("Iniciar", True, (200, 200, 200))
-        play_rect = play_button.get_rect(center = (screen_width // 2, 300))
-        
-        pygame.draw.rect(screen, (70, 70, 70), play_rect.inflate(20, 10))
+            hovered = pygame.Rect(x, y, button_width, button_height).collidepoint(mouse_pos)
 
-        screen.blit(play_button, play_rect)
+            button_rect = draw_modern_button(
+                screen, x, y, button_width, button_height,
+                button["label"], button_font, is_hovered=hovered
+            )
 
-        #Settings button
-        settings_button = font_small.render("Configurações", True, (200, 200, 200))
-        settings_rect = settings_button.get_rect(center = (screen_width // 2, 450))
-        
-        pygame.draw.rect(screen, (70, 70, 70), settings_rect.inflate(20, 10))
+            button["rect"] = button_rect  # Salva para detecção de clique
 
-        screen.blit(settings_button, settings_rect)
-
-        #Exit button
-        exit_button = font_small.render("Sair", True, (200, 200, 200))
-        exit_rect = exit_button.get_rect(center = (screen_width // 2, 600))
-        
-        pygame.draw.rect(screen, (70, 70, 70), exit_rect.inflate(20, 10))
-
-        screen.blit(exit_button, exit_rect)
-
-
-        #Display Update
         pygame.display.flip()
+        clock.tick(60)
 
-        #Event Loop
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return 'exit'
-
+                return "exit"
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if play_rect.collidepoint(event.pos):
-                    return 'select_music'
-                
-                if settings_rect.collidepoint(event.pos):
-                    return 'settings'
-                
-                if exit_rect.collidepoint(event.pos):
-                    return 'exit'
+                for button in buttons:
+                    if button["rect"].collidepoint(event.pos):
+                        return button["action"]

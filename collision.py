@@ -83,7 +83,7 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
     readed_inputs: List[inputs.Input] = []
     readed_notes: List[notes.Note] = []
 
-    notes_pos = [200, 400, 600, 800]
+    notes_pos = [400, 550, 700, 850]
     keys_list = inputs.load_user_settings()
     keys_label = dict(zip(keys_list, notes_pos))
 

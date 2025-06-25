@@ -25,18 +25,29 @@ class Note:
         else:
             self.size = (100, 25)
 
-        #Note Surface - criada APÓS calcular o tamanho
-        self.surf = pygame.Surface(self.size)
-        if self.end_time - self.hit_time == 0:
-            self.surf.fill("Red")
-        else:
-            self.surf.fill("Blue")
+        #Note Surface
+        self.surf = pygame.Surface(self.size, pygame.SRCALPHA)
+        color_map = {
+            0: (255, 100, 100, 220),
+            1: (100, 255, 100, 220),
+            2: (100, 100, 255, 220),
+            3: (255, 255, 100, 220)
+        }
+
+        border_color = (255, 255, 255)
+        color = color_map.get(self.type_note % 4, (180, 180, 180, 220))
+
+        self.surf.fill((0, 0, 0, 0))
+        pygame.draw.rect(self.surf, color, self.surf.get_rect(), border_radius=6)
+        pygame.draw.rect(self.surf, border_color, self.surf.get_rect(), width=2, border_radius=6)
+
 
     def adjust_pos(self):
-        if self.pos_x == 64: self.pos_x = 200
-        if self.pos_x == 192: self.pos_x = 400
-        if self.pos_x == 320: self.pos_x = 600
-        if self.pos_x == 448: self.pos_x = 800
+
+        if self.pos_x == 64: self.pos_x = 400
+        if self.pos_x == 192: self.pos_x = 550
+        if self.pos_x == 320: self.pos_x = 700
+        if self.pos_x == 448: self.pos_x = 850
 
         self.pos_y = 0
 
@@ -54,13 +65,12 @@ class Note:
 
         
     
-def notes_generator(mapped_file: str, note_order: queue.Queue):
+def notes_generator(mapped_file: str, note_data: queue.Queue):
     path: str = os.path.join("mapped_music",f"map_{mapped_file}",f"{mapped_file}.txt")
 
     with open(path, "r") as file:
         file_lines = file.readlines()
     
-    # Calcular travel_time uma vez só
     travel_time = (screen_height - 50) / 1000
     
     for line in file_lines:
@@ -68,8 +78,7 @@ def notes_generator(mapped_file: str, note_order: queue.Queue):
 
         else:
             str_line = line.strip().split(",")
-            # PASSAR travel_time no construtor
             note = Note(str_line[0], str_line[1], str_line[2], str_line[3], str_line[4], travel_time)
 
-            note_order.put(note)
+            note_data.put(note)
 
