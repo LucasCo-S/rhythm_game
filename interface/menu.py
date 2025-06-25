@@ -25,8 +25,6 @@ def menu_screen(screen: pygame.Surface, screen_width: int, screen_height: int):
 
     while True:
         create_modern_background(screen, screen_width, screen_height)
-
-        # Título centralizado
         title = title_font.render("Rhyphos", True, (240, 240, 255))
         title_rect = title.get_rect(center=(screen_width // 2, 120))
         screen.blit(title, title_rect)
@@ -44,7 +42,7 @@ def menu_screen(screen: pygame.Surface, screen_width: int, screen_height: int):
                 button["label"], button_font, is_hovered=hovered
             )
 
-            button["rect"] = button_rect  # Salva para detecção de clique
+            button["rect"] = button_rect 
 
         pygame.display.flip()
         clock.tick(60)

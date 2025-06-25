@@ -77,7 +77,7 @@ class Collision_Record:
 
 
 # Thread that receive data from main
-def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_info: queue.Queue, shared_time: SharedTime):
+def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_info: queue.Queue, shared_time: SharedTime, event_pause):
 
     #Lists with inputs and notes values
     readed_inputs: List[inputs.Input] = []
@@ -88,6 +88,8 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
     keys_label = dict(zip(keys_list, notes_pos))
 
     while True:
+        event_pause.wait()
+        
         # Get current time
         game_time: float = shared_time.get()
         

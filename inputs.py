@@ -20,8 +20,9 @@ class Input:
         if self.duration < time_pressed: self.type_event = "#TAP"
         else: self.type_event = "#HOLD"
 
-def input_listen(input_data: queue.Queue, input_info: queue.Queue):
+def input_listen(input_data: queue.Queue, input_info: queue.Queue, event_pause):
     while True:
+        event_pause.wait()
         while not input_data.empty():
             key, start, end = input_data.get()
 
