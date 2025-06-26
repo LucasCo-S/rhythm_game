@@ -13,7 +13,7 @@ class SharedTime:
         self._lock = threading.Lock()
     
     def update(self, new_time):
-        with self._lock:
+        with self._lock: #Semaphorization
             self._time = new_time
     
     def get(self):
@@ -30,7 +30,6 @@ class Collision_Record:
         self.points = None
         self.delta_precision = None
 
-    
     def compute_precision(self):
         precision_label = {
             80: "PERFECT",
@@ -76,7 +75,6 @@ class Collision_Record:
         self.points = points_label[self.precision]
 
 
-
 #Thread that receive data from main
 def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_info: queue.Queue, shared_time: SharedTime, event_pause):
 
@@ -90,8 +88,6 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
 
     while True:
         event_pause.wait() #Semaphorization
-        
-        game_time: float = shared_time.get()
         
         #Reading data from main
         new_inputs: List[inputs.Input] = []
@@ -110,74 +106,71 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
             except queue.Empty:
                 break
         
-        #Identify collision from hold and tap notes
-        process_inputs(new_inputs, readed_notes, collision_info, keys_label)
-        process_notes(readed_inputs, readed_notes, collision_info, keys_label, game_time)
-        missed_notes(readed_notes, collision_info, game_time)
+        #Process collisions - ordem alterada para evitar conflitos
+        process_collisions(readed_inputs, readed_notes, collision_info, keys_label, shared_time)
+        
+        #Limpar notas perdidas DEPOIS do processamento de colisões
+        missed_notes(readed_notes, collision_info, shared_time)
 
-        #Clean up both lists before collision checking
-        cleanLists(readed_inputs, readed_notes, game_time, keys_label)
+        #Clean up both lists DEPOIS de todo o processamento
+        cleanLists(readed_inputs, readed_notes, shared_time)
 
-        time.sleep(0.01)
+        time.sleep(0.00005)  # Reduzido para melhor responsividade
 
-def process_inputs(new_inputs, readed_notes, collision_info: queue.Queue, keys_label):
-    for input_ in new_inputs:
+def process_collisions(readed_inputs, readed_notes, collision_info: queue.Queue, keys_label, shared_time):
+    game_time = shared_time.get()
+
+    # Organizar notas por coluna
+    notes_by_column = {}
+    for note in readed_notes:
+        if note.reached:
+            continue
+        col = note.pos_x
+        if col not in notes_by_column:
+            notes_by_column[col] = []
+        notes_by_column[col].append(note)
+
+    # Ordenar notas por proximidade do tempo de acerto
+    for col_notes in notes_by_column.values():
+        col_notes.sort(key=lambda n: abs(n.hit_time - game_time))
+
+    # Verificar cada input
+    for input_ in readed_inputs:
         if input_.reached:
             continue
 
-        column = keys_label[input_.key]
-        candidate_notes = []
-        for note in readed_notes:
-            if note.reached or note.pos_x != column:
+        col = keys_label.get(input_.key)
+        if col not in notes_by_column:
+            continue
+
+        possible_notes = notes_by_column[col]
+
+        for note in possible_notes:
+            if note.reached:
                 continue
 
-            delta_hit = abs(input_.start - note.hit_time)
-            if delta_hit <= 300: #Tolerance to hit
-                candidate_notes.append((note, delta_hit))
+            delta = abs(input_.start - note.hit_time)
+            if delta <= 300 and match_tester(input_, note):
+                create_collision(input_, note, collision_info)
+                break  # um input só colide com uma nota
 
-        if not candidate_notes:
-            continue
 
-        candidate_notes.sort(key=lambda x: x[1]) #Use the second tuple value to find the best note for collision
-        best_note = candidate_notes[0][0]
 
-        if match_tester(input_, best_note):
-            create_collision(input_, best_note, collision_info)
+def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
+    game_time = shared_time.get()
 
-def process_notes(readed_inputs, readed_notes, collision_info: queue.Queue, keys_label, game_time):
-    perfect_window = 50
-
+    """Processa notas perdidas"""
+    miss_tolerance = 300  # Tempo após o hit_time para considerar MISS
+    
     for note in readed_notes:
         if note.reached:
             continue
 
-        time_to_hit = abs(note.hit_time - game_time)
-        if time_to_hit <= perfect_window:
-            column = note.pos_x
-            best_input = None
-            best_delta = float('inf') #Receive a 'infinite' value 
-
-            for input_ in readed_inputs:
-                if input_.reached:
-                    continue
-
-                if keys_label[input_.key] != column:
-                    continue
-
-                delta = abs(input_.start - note.hit_time)
-                if delta < best_delta and delta <= 300: #Tolerance to hit
-                    best_input = input_
-                    best_delta = delta
-
-            if best_input and match_tester(best_input, note):
-                create_collision(best_input, note, collision_info)
-
-def missed_notes(readed_notes, collision_info: queue.Queue, game_time: float):
-    for note in readed_notes:
-        if note.reached:
-            continue
-
-        if game_time - note.hit_time > 300: #Tolerance to hit
+        # Só considera MISS se o tempo atual passou do tempo de hit + tolerância
+        # E a nota ainda não foi tocada
+        time_since_hit = game_time - note.hit_time
+        
+        if time_since_hit > miss_tolerance:  # Passou do tempo + tolerância
             fail_input = inputs.Input(note.pos_x, note.hit_time, note.hit_time)
             fail_input.reached = True
             note.reached = True
@@ -185,23 +178,29 @@ def missed_notes(readed_notes, collision_info: queue.Queue, game_time: float):
             miss_record = Collision_Record(note, fail_input)
             miss_record.precision = "MISS"
             miss_record.points = 0
-            miss_record.delta_precision = abs(note.hit_time - game_time)
+            miss_record.delta_precision = time_since_hit
 
             collision_info.put(miss_record)
+            
+            note_type = "HOLD" if note.type_note == 128 else "TAP"
+            print(f">> {note_type} MISS! Time since hit: {time_since_hit}ms")
 
 def match_tester(input_: inputs.Input, note: notes.Note) -> bool:
+    """Testa se input e nota são compatíveis"""
     delta_time = abs(input_.start - note.hit_time)
-    if delta_time > 300: #Tolerance to hit
+    if delta_time > 300:  # Tolerância para hit
         return False
 
+    # Para notas hold, verificar também a duração
     if note.type_note == 128:
         duration_delta = abs(input_.duration - note.duration)
-        if duration_delta > 300:
+        if duration_delta > 300:  # Tolerância para duração
             return False
 
     return True
 
 def create_collision(input_: inputs.Input, note: notes.Note, collision_info: queue.Queue):
+    """Cria um registro de colisão"""
     input_.reached = True
     note.reached = True
 
@@ -215,14 +214,21 @@ def create_collision(input_: inputs.Input, note: notes.Note, collision_info: que
     print(f">> {note_type} Hit! Precision: {collision_hit.precision} ({collision_hit.delta_precision}ms)")
 
 
-# Clean lists to ensure the data is relevant
-def cleanLists(inputs_list: List[inputs.Input], notes_list: List[notes.Note], game_time: float, keys_label):
+def cleanLists(inputs_list: List[inputs.Input], notes_list: List[notes.Note], shared_time):
+    game_time = shared_time.get()
+    """Limpa listas removendo elementos muito antigos ou já processados"""
     
-    limit_time: float = 1000.0
+    # Tempo limite para manter elementos na memória
+    limit_time: float = 2000.0  # Aumentado para 2 segundos
     
-    inputs_list[:] = [input for input in inputs_list if (game_time - input.end) < limit_time]
+    # Remover inputs muito antigos ou já processados
+    inputs_list[:] = [
+        input for input in inputs_list 
+        if (game_time - input.end) < limit_time and not input.reached
+    ]
     
-    notes_list[:] = [note for note in notes_list if (note.hit_time - game_time) > -limit_time and (note.hit_time - game_time) < limit_time]
-    
-    inputs_list[:] = [input for input in inputs_list if not input.reached]
-    notes_list[:] = [note for note in notes_list if not note.reached]
+    # Remover notas muito antigas ou já processadas
+    notes_list[:] = [
+        note for note in notes_list 
+        if abs(note.hit_time - game_time) < limit_time and not note.reached
+    ]

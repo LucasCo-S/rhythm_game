@@ -344,7 +344,7 @@ def game_loop(selected_music: str):
     pause_time_marker = None  #Time pause mark
     total_paused_time = 0.0 
 
-    tolerance = 12 #Spawn notes
+    tolerance = 20 #Spawn notes
 
     music_playing = False
     music_status = 0
