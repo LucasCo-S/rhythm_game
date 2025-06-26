@@ -32,10 +32,10 @@ class Collision_Record:
 
     def compute_precision(self):
         precision_label = {
-            80: "PERFECT",
-            100: "GREAT", 
-            150: "GOOD",
-            300: "BAD",
+            500: "PERFECT",
+            700: "GREAT", 
+            1000: "GOOD",
+            1500: "BAD",
             -1: "MISS"
         }
 
@@ -52,14 +52,14 @@ class Collision_Record:
         self.delta_precision = precision
         
         #Determine precision category based on timing difference
-        if precision <= 80:
-            self.precision = precision_label[80]  # PERFECT
-        elif precision <= 100:
-            self.precision = precision_label[100]  # GREAT
-        elif precision <= 150:
-            self.precision = precision_label[150]  # GOOD
-        elif precision <= 300:
-            self.precision = precision_label[300]  # BAD
+        if precision <= 500:
+            self.precision = precision_label[500]  # PERFECT
+        elif precision <= 700:
+            self.precision = precision_label[700]  # GREAT
+        elif precision <= 1000:
+            self.precision = precision_label[1000]  # GOOD
+        elif precision <= 1500:
+            self.precision = precision_label[1500]  # BAD
         else:
             self.precision = precision_label[-1]  # MISS 
     
@@ -150,7 +150,7 @@ def process_collisions(readed_inputs, readed_notes, collision_info: queue.Queue,
                 continue
 
             delta = abs(input_.start - note.hit_time)
-            if delta <= 300 and match_tester(input_, note):
+            if delta <= 3000 and match_tester(input_, note):
                 create_collision(input_, note, collision_info)
                 break  # um input só colide com uma nota
 
@@ -160,7 +160,7 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
     game_time = shared_time.get()
 
     """Processa notas perdidas"""
-    miss_tolerance = 300  # Tempo após o hit_time para considerar MISS
+    miss_tolerance = 1000  # Tempo após o hit_time para considerar MISS
     
     for note in readed_notes:
         if note.reached:
@@ -188,13 +188,13 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
 def match_tester(input_: inputs.Input, note: notes.Note) -> bool:
     """Testa se input e nota são compatíveis"""
     delta_time = abs(input_.start - note.hit_time)
-    if delta_time > 300:  # Tolerância para hit
+    if delta_time > 3000:  # Tolerância para hit
         return False
 
     # Para notas hold, verificar também a duração
     if note.type_note == 128:
         duration_delta = abs(input_.duration - note.duration)
-        if duration_delta > 300:  # Tolerância para duração
+        if duration_delta > 3000:  # Tolerância para duração
             return False
 
     return True
