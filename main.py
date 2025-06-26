@@ -110,7 +110,7 @@ def draw_notes(delta_time: float):
         screen.blit(note.surf, note_rect)
 
         note_id = id(note)
-        if (not game_paused and note.pos_y > (hit_pos_y - 50) and note.pos_y < (hit_pos_y + 50) and note_id not in sent_notes):
+        if (not game_paused and note.pos_y > (hit_pos_y - 150) and note.pos_y < (hit_pos_y + 50) and note_id not in sent_notes):
             note_info.put(note)
             sent_notes.add(note_id)
 
@@ -250,12 +250,12 @@ class SimpleFeedback:
             "MISS": (255, 50, 50)
         }
     
-    def add_feedback(self, precision, points, x, y):
+    def add_feedback(self, precision, points, x):
         feedback = {
             'text': precision,
             'points': points,
             'x': x,
-            'y': y,
+            'y': screen_height - (screen_height * 0.4),
             'time': time.time(),
             'alpha': 255
         }
@@ -315,7 +315,7 @@ class SimpleFeedback:
                 collision = collision_queue.get_nowait()
                 
                 # Adiciona feedback na posição da nota
-                self.add_feedback(collision.precision, collision.points, collision.note_info.pos_x, collision.note_info.pos_y - 50)
+                self.add_feedback(collision.precision, collision.points, collision.note_info.pos_x)
 
                 collision_result.put(collision)
             except queue.Empty:
