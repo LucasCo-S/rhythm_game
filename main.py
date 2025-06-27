@@ -47,25 +47,44 @@ pause_event = threading.Event()
 pause_event.set() 
 
 game_paused = False
+resume_delay_active = False
+resume_start_time = 0
+RESUME_DELAY = 3.2 
 
 def semaphore_pause(pause_event, music_playing, game_start_time):
-    global game_paused
+    global game_paused, resume_delay_active, resume_start_time
     
-    if pause_event.is_set():  # Está rodando -> vamos pausar
+    if pause_event.is_set():  # Está rodando
         pause_event.clear()  # Pausa as threads
         if music_playing:  # Só pausa se música estiver tocando
             pygame.mixer.music.pause()
         game_paused = True
+        resume_delay_active = False  # Reset do delay
         pause_start_time = time.perf_counter()  # Marca quando pausou
         return game_start_time, pause_start_time
 
-    else:  # Está pausado -> vamos despausar
-        pause_event.set()  # Libera as threads
-        if music_playing:  # Só despausa se música estava tocando
-            pygame.mixer.music.unpause()
-        game_paused = False
+    else:  # Está pausado - iniciando processo de retomada
+        # Inicia o delay de 3 segundos
+        resume_delay_active = True
+        resume_start_time = time.perf_counter()
         pause_end_time = time.perf_counter()
         return game_start_time, pause_end_time
+
+def check_resume_delay():
+    """Verifica se o delay de retomada terminou"""
+    global resume_delay_active, game_paused, music_playing
+    
+    if resume_delay_active:
+        elapsed_time = time.perf_counter() - resume_start_time
+        if elapsed_time >= RESUME_DELAY:
+            # Delay terminou, retomar o jogo
+            pause_event.set()  # Libera as threads
+            if music_playing:  # Só despausa se música estava tocando
+                pygame.mixer.music.unpause()
+            game_paused = False
+            resume_delay_active = False
+            return True
+    return False
 
 #Input settings
 key_label = {}
@@ -104,17 +123,17 @@ def draw_notes(delta_time: float):
     for note in screen_notes:
         note_rect = note.surf.get_rect(midbottom = (note.pos_x, note.pos_y))
         
-        if not game_paused:
+        if not game_paused and not resume_delay_active:
             note.fall_note(delta_time)
 
         screen.blit(note.surf, note_rect)
 
         note_id = id(note)
-        if (not game_paused and note.pos_y > (hit_pos_y - 150) and note.pos_y < (hit_pos_y + 50) and note_id not in sent_notes):
+        if (not game_paused and not resume_delay_active and note.pos_y > (hit_pos_y - 150) and note.pos_y < (hit_pos_y + 50) and note_id not in sent_notes):
             note_info.put(note)
             sent_notes.add(note_id)
 
-    if not game_paused:
+    if not game_paused and not resume_delay_active:
         screen_notes[:] = [note for note in screen_notes if note.pos_y < screen_height + note.size[1]]
 
 
@@ -209,23 +228,36 @@ def draw_stylized_hitbox():
     pygame.draw.line(screen, (200, 220, 255), (0, hit_pos_y), (screen_width, hit_pos_y), 2)
 
 def draw_pause_overlay():
-    #Layer Over the game to pause
+    global resume_delay_active, resume_start_time
+    
+    # Layer sobre o jogo para pausar
     overlay = pygame.Surface((screen_width, screen_height))
     overlay.set_alpha(100)
     overlay.fill((0, 0, 0))
     screen.blit(overlay, (0, 0))
     
-    #Pause msg
     font = pygame.font.Font(None, 74)
-    pause_text = font.render("PAUSADO", True, (255, 255, 255))
-    text_rect = pause_text.get_rect(center=(screen_width//2, 300))
-    screen.blit(pause_text, text_rect)
-    
-    #Instruction
     font_small = pygame.font.Font(None, 36)
-    instruction_text = font_small.render("Pressione ESC para continuar", True, (200, 200, 200))
-    instruction_rect = instruction_text.get_rect(center=(screen_width//2, screen_height//2 + 60))
-    screen.blit(instruction_text, instruction_rect)
+    
+    if resume_delay_active:
+        # Mostra contador regressivo
+        elapsed_time = time.perf_counter() - resume_start_time
+        remaining_time = max(0, RESUME_DELAY - elapsed_time)
+        
+        countdown_text = font.render(f"{int(remaining_time)}", True, (255, 255, 100))
+        text_rect = countdown_text.get_rect(center=(screen_width//2, 300))
+        screen.blit(countdown_text, text_rect)
+        
+    else:
+        # Pausa normal
+        pause_text = font.render("PAUSADO", True, (255, 255, 255))
+        text_rect = pause_text.get_rect(center=(screen_width//2, 300))
+        screen.blit(pause_text, text_rect)
+        
+        # Instrução
+        instruction_text = font_small.render("Pressione ESC para continuar", True, (200, 200, 200))
+        instruction_rect = instruction_text.get_rect(center=(screen_width//2, screen_height//2 + 60))
+        screen.blit(instruction_text, instruction_rect)
 
 #Immediatly feedback
 class SimpleFeedback:
@@ -330,10 +362,15 @@ class SimpleFeedback:
 clock.tick(FPS)  #Define game ticks by FPS
 
 def game_loop(selected_music: str):
+    global music_playing, music_status
+    
     pause_event.wait() #Wait for any pause signal
 
+    #Getting User Settings
+    input_keys, volume_stts = inputs.load_user_settings()
+
     notes.notes_generator(selected_music, note_data)
-    music.music_init(selected_music)
+    music.music_init(selected_music, volume_stts)
     feedback = SimpleFeedback(screen_width, screen_height)
 
     get_interval_notes()
@@ -357,20 +394,21 @@ def game_loop(selected_music: str):
 
     sent_notes.clear()
     screen_notes.clear()
-
-    #Getting User Settings
-    input_keys = inputs.load_user_settings()
     
     #Map input keys to button positions
     key_to_position = {}
     if len(input_keys) >= 4:
         positions = [400, 550, 700, 850]
-        for i, key in enumerate(sorted(input_keys)[:4]):
+        for i, key in enumerate(input_keys[:4]):
             key_to_position[key] = positions[i]
 
     while True:
         delta_time = clock.tick(FPS)
         current_time = time.perf_counter()
+        
+        # Verifica se o delay de retomada terminou
+        if resume_delay_active:
+            check_resume_delay()
         
         if game_paused and pause_time_marker:
             game_time = (pause_time_marker - game_start_time - total_paused_time) * 1000
@@ -388,26 +426,29 @@ def game_loop(selected_music: str):
                 exit()
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                if game_paused:
-                    #If the game is paused
-                    game_start_time, pause_end_time = semaphore_pause(pause_event, music_playing, game_start_time)
-                    if pause_time_marker:
-                        paused_duration = pause_end_time - pause_time_marker
-                        total_paused_time += paused_duration
-                    pause_time_marker = None
-                else:
-                    #Pausing game
-                    game_start_time, pause_time_marker = semaphore_pause(pause_event, music_playing, game_start_time)
+                # Só permite pausar/despausar se não estiver no delay
+                if not resume_delay_active:
+                    if game_paused:
+                        # Se o jogo está pausado, inicia processo de retomada
+                        game_start_time, pause_end_time = semaphore_pause(pause_event, music_playing, game_start_time)
+                        if pause_time_marker:
+                            paused_duration = pause_end_time - pause_time_marker
+                            total_paused_time += paused_duration
+                        pause_time_marker = None
+                    else:
+                        # Pausando jogo
+                        game_start_time, pause_time_marker = semaphore_pause(pause_event, music_playing, game_start_time)
 
+            # Só processa inputs se não estiver pausado nem no delay
             if event.type == pygame.KEYDOWN and event.key in input_keys:
-                if not game_paused:
+                if not game_paused and not resume_delay_active:
                     key_label[event.key] = game_time
                     # Activate button visual effect
                     if event.key in key_to_position:
                         game_visuals.press_button(key_to_position[event.key])
 
             if event.type == pygame.KEYUP and event.key in input_keys:
-                if not game_paused:
+                if not game_paused and not resume_delay_active:
                     input_start_time = key_label.pop(event.key, None)
                     # Deactivate button visual effect
                     if event.key in key_to_position:
@@ -417,7 +458,8 @@ def game_loop(selected_music: str):
                         input_end_time = game_time
                         input_data.put((event.key, input_start_time, input_end_time))
 
-        if not game_paused:
+        # Só executa lógica do jogo se não estiver pausado nem no delay
+        if not game_paused and not resume_delay_active:
             if game_time >= music_delay and not music_playing:
                 music.music_controller(music_status)
                 music_playing = True
@@ -431,7 +473,8 @@ def game_loop(selected_music: str):
         draw_stylized_hitbox()
         game_visuals.draw_hitbox_buttons(screen, game_time)
         
-        if game_paused:
+        # Desenha overlay de pausa (incluindo countdown)
+        if game_paused or resume_delay_active:
             draw_pause_overlay()
 
         #Game over verification

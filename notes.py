@@ -52,7 +52,7 @@ class Note:
         self.pos_y = 0
 
     def fall_note(self, delta_time: float):
-        self.pos_y += self.speed * delta_time
+        self.pos_y += self.speed * delta_time * 1.5
 
     def compute_size(self, travel_time):
         if self.duration <= 0:

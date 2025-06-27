@@ -65,7 +65,7 @@ def readchart_files(file_path: str, music_path: str):
     shutil.move(map_folder, "mapped_music")
 
 
-def music_init(music_name: str):
+def music_init(music_name: str, volume_stts: float):
     path_music: str = os.path.join("mapped_music",f"map_{music_name}",f"m_{music_name}.mp3")
 
     if not os.path.exists(path_music):
@@ -73,6 +73,8 @@ def music_init(music_name: str):
 
     pygame.mixer.init()
     pygame.mixer.music.load(path_music)
+
+    pygame.mixer.music.set_volume(volume_stts)
 
 def music_controller(music_status: int):
     if music_status == 0:

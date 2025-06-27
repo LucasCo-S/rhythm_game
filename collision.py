@@ -32,18 +32,18 @@ class Collision_Record:
 
     def compute_precision(self):
         precision_label = {
-            500: "PERFECT",
+            400: "PERFECT",
             700: "GREAT", 
             1000: "GOOD",
-            1500: "BAD",
+            1300: "BAD",
             -1: "MISS"
         }
 
         precision = abs(self.note_info.hit_time - self.input_info.start)
         
         #Debug
-        print(f"DEBUG - Note hit_time: {self.note_info.hit_time}, Input start: {self.input_info.start}")
-        print(f"DEBUG - Precision delta: {precision}")
+        # print(f"DEBUG - Note hit_time: {self.note_info.hit_time}, Input start: {self.input_info.start}")
+        # print(f"DEBUG - Precision delta: {precision}")
         
         if self.type == 128:
             duration_precision = abs(self.note_info.duration - self.input_info.duration)
@@ -52,14 +52,14 @@ class Collision_Record:
         self.delta_precision = precision
         
         #Determine precision category based on timing difference
-        if precision <= 500:
-            self.precision = precision_label[500]  # PERFECT
+        if precision <= 400:
+            self.precision = precision_label[400]  # PERFECT
         elif precision <= 700:
             self.precision = precision_label[700]  # GREAT
         elif precision <= 1000:
             self.precision = precision_label[1000]  # GOOD
-        elif precision <= 1500:
-            self.precision = precision_label[1500]  # BAD
+        elif precision <= 1300:
+            self.precision = precision_label[1300]  # BAD
         else:
             self.precision = precision_label[-1]  # MISS 
     
@@ -83,11 +83,12 @@ def collision_tester(input_info: queue.Queue, note_info: queue.Queue, collision_
     readed_notes: List[notes.Note] = []
 
     notes_pos = [400, 550, 700, 850]
-    keys_list = inputs.load_user_settings()
-    keys_label = dict(zip(keys_list, notes_pos))
 
     while True:
         event_pause.wait() #Semaphorization
+
+        keys_list = inputs.load_user_settings()[0]
+        keys_label = dict(zip(keys_list, notes_pos))
         
         #Reading data from main
         new_inputs: List[inputs.Input] = []
@@ -149,8 +150,7 @@ def process_collisions(readed_inputs, readed_notes, collision_info: queue.Queue,
             if note.reached:
                 continue
 
-            delta = abs(input_.start - note.hit_time)
-            if delta <= 3000 and match_tester(input_, note):
+            if match_tester(input_, note):
                 create_collision(input_, note, collision_info)
                 break  # um input só colide com uma nota
 
@@ -160,7 +160,7 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
     game_time = shared_time.get()
 
     """Processa notas perdidas"""
-    miss_tolerance = 1000  # Tempo após o hit_time para considerar MISS
+    miss_tolerance = 1200  # Tempo após o hit_time para considerar MISS
     
     for note in readed_notes:
         if note.reached:
@@ -183,18 +183,18 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
             collision_info.put(miss_record)
             
             note_type = "HOLD" if note.type_note == 128 else "TAP"
-            print(f">> {note_type} MISS! Time since hit: {time_since_hit}ms")
+            #print(f">> {note_type} MISS! Time since hit: {time_since_hit}ms")
 
 def match_tester(input_: inputs.Input, note: notes.Note) -> bool:
     """Testa se input e nota são compatíveis"""
     delta_time = abs(input_.start - note.hit_time)
-    if delta_time > 3000:  # Tolerância para hit
+    if delta_time > 1500:  # Tolerância para hit
         return False
 
     # Para notas hold, verificar também a duração
     if note.type_note == 128:
         duration_delta = abs(input_.duration - note.duration)
-        if duration_delta > 3000:  # Tolerância para duração
+        if duration_delta > 1500:  # Tolerância para duração
             return False
 
     return True
@@ -211,7 +211,7 @@ def create_collision(input_: inputs.Input, note: notes.Note, collision_info: que
     collision_info.put(collision_hit)
 
     note_type = "HOLD" if note.type_note == 128 else "TAP"
-    print(f">> {note_type} Hit! Precision: {collision_hit.precision} ({collision_hit.delta_precision}ms)")
+    #print(f">> {note_type} Hit! Precision: {collision_hit.precision} ({collision_hit.delta_precision}ms)")
 
 
 def cleanLists(inputs_list: List[inputs.Input], notes_list: List[notes.Note], shared_time):

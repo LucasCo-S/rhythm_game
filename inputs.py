@@ -41,6 +41,7 @@ def load_user_settings(user_path: str = "settings/user.json") -> List:
         settings = json.load(file)
     
     keys_dict = settings["keys"]
+    volume_dict = settings["volume"]
     
     keys_list = [pygame.key.key_code(key) for key in keys_dict.values()]
-    return keys_list
+    return (keys_list, volume_dict)
