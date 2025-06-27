@@ -266,7 +266,7 @@ class SimpleFeedback:
         self.screen_height = screen_height
         
         #Fonts
-        self.font_large = pygame.font.Font(None, 48)
+        self.font_large = pygame.font.Font(None, 40)
         self.font_medium = pygame.font.Font(None, 36)
         
         #Feedback ativo

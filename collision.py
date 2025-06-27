@@ -170,7 +170,7 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
         # E a nota ainda não foi tocada
         time_since_hit = game_time - note.hit_time
         
-        if time_since_hit > miss_tolerance:  # Passou do tempo + tolerância
+        if time_since_hit > miss_tolerance and note.type_note != 128:  # Passou do tempo + tolerância
             fail_input = inputs.Input(note.pos_x, note.hit_time, note.hit_time)
             fail_input.reached = True
             note.reached = True
@@ -184,17 +184,31 @@ def missed_notes(readed_notes, collision_info: queue.Queue, shared_time):
             
             note_type = "HOLD" if note.type_note == 128 else "TAP"
             #print(f">> {note_type} MISS! Time since hit: {time_since_hit}ms")
+        
+        elif time_since_hit - note.duration > miss_tolerance and note_type == 128:
+
+            fail_input = inputs.Input(note.pos_x, note.hit_time, note.hit_time)
+            fail_input.reached = True
+            note.reached = True
+
+            miss_record = Collision_Record(note, fail_input)
+            miss_record.precision = "MISS"
+            miss_record.points = 0
+            miss_record.delta_precision = time_since_hit
+
+            collision_info.put(miss_record)         
+
 
 def match_tester(input_: inputs.Input, note: notes.Note) -> bool:
     """Testa se input e nota são compatíveis"""
     delta_time = abs(input_.start - note.hit_time)
-    if delta_time > 1500:  # Tolerância para hit
+    if delta_time > 1300:  # Tolerância para hit
         return False
 
     # Para notas hold, verificar também a duração
     if note.type_note == 128:
         duration_delta = abs(input_.duration - note.duration)
-        if duration_delta > 1500:  # Tolerância para duração
+        if duration_delta > 1300:  # Tolerância para duração
             return False
 
     return True
@@ -219,7 +233,7 @@ def cleanLists(inputs_list: List[inputs.Input], notes_list: List[notes.Note], sh
     """Limpa listas removendo elementos muito antigos ou já processados"""
     
     # Tempo limite para manter elementos na memória
-    limit_time: float = 2000.0  # Aumentado para 2 segundos
+    limit_time: float = 3000.0  # Aumentado para 2 segundos
     
     # Remover inputs muito antigos ou já processados
     inputs_list[:] = [

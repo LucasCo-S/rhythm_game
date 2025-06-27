@@ -2,6 +2,7 @@ import pygame
 import queue
 from pathlib import Path
 import os
+import random as rd
 
 screen_width: int = 1280
 screen_height: int = 720
@@ -45,9 +46,10 @@ class Note:
     def adjust_pos(self):
 
         if self.pos_x == 64: self.pos_x = 400
-        if self.pos_x == 192: self.pos_x = 550
-        if self.pos_x == 320: self.pos_x = 700
-        if self.pos_x == 448: self.pos_x = 850
+        elif self.pos_x == 192: self.pos_x = 550
+        elif self.pos_x == 320: self.pos_x = 700
+        elif self.pos_x == 448: self.pos_x = 850
+        else: self.pos_x = rd.choice((400,550,700,850))
 
         self.pos_y = 0
 
